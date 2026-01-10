@@ -1,6 +1,6 @@
 # ClockMaster
 
-基于 Auto.js Pro 的 Android 自动化打卡助手，支持热更新、定时任务、推送通知。
+M1n6基于mm的需求 用Auto.js Pro 的 Android 自动化打卡助手，支持热更新、定时任务、推送通知。
 
 ## 功能特性
 
