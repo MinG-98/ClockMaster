@@ -1,0 +1,37 @@
+{
+  "name": "ClockMaster",
+  "packageName": "com.m1n6.clockmaster",
+  "versionName": "1.0.0",
+  "versionCode": 1,
+  "main": "app/main.js",
+  "ignore": [
+    "build",
+    "*.md",
+    ".git"
+  ],
+  "icon": "app/assets/icon.png",
+  "launchConfig": {
+    "hideLogs": true,
+    "stableMode": true,
+    "displaySplash": true,
+    "splashText": "ClockMaster 启动中...",
+    "splashIcon": "app/assets/icon.png",
+    "permissions": [
+      "accessibility_services",
+      "draw_overlay",
+      "external_storage",
+      "foreground_service"
+    ],
+    "serviceDesc": "ClockMaster 后台服务"
+  },
+  "buildConfig": {
+    "useDefaultIcons": false,
+    "abis": ["arm64-v8a", "armeabi-v7a"],
+    "obscuredFiles": [],
+    "signingConfig": {
+      "alias": "clockmaster",
+      "keystore": ""
+    }
+  },
+  "encryptLevel": 0
+}

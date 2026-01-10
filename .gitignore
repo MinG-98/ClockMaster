@@ -1,0 +1,20 @@
+# Build outputs
+build/
+*.apk
+
+# Local backups
+/sdcard/ClockMaster/
+
+# IDE
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local config (if contains sensitive data)
+# config.local.json
