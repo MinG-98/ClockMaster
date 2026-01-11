@@ -1,278 +1,128 @@
 /**
- * main.js - ClockMaster 主入口
- * ClockMaster - Main Entry Point
- *
- * 流程: 权限检查 -> 显示UI -> 用户配置 -> 执行任务
+ * Project ClockMaster - Main Loader (修复命名冲突版)
+ * 修复点：将 id="run" 改为 id="btn_exec"，防止与系统函数 ui.run() 冲突
  */
 
 "ui";
 
-// 模块导入
-var Permission = require("./modules/permission.js");
-var Storage = require("./modules/storage.js");
-var UIPresenter = require("./modules/ui_pres.js");
-var Launcher = require("./modules/launcher.js");
-var History = require("./modules/history.js");
-var Scheduler = require("./modules/scheduler.js");
+// 1. 定义 UI 布局
+ui.layout(
+    <vertical padding="16" bg="#f5f5f5">
+        <text text="ClockMaster" textSize="24sp" textStyle="bold" gravity="center" textColor="#333333" margin="0 20"/>
+        <text text="智能打卡助手 v1.0.2 (Fix)" textSize="12sp" gravity="center" textColor="#999999" margin="0 0 0 20"/>
+        
+        <card cardCornerRadius="8dp" cardElevation="4dp" margin="0 5" bg="#ffffff">
+            <vertical padding="16">
+                <text text="基础配置" textStyle="bold" textColor="#000000"/>
+                
+                <text text="PushPlus Token" marginTop="10" textColor="#666666" textSize="12sp"/>
+                <input id="token" hint="请输入Token" textSize="14sp"/>
+                
+                <text text="目标App包名" marginTop="10" textColor="#666666" textSize="12sp"/>
+                <input id="pkg" hint="例如: com.alibaba.android.rimet" textSize="14sp"/>
+                
+                <text text="脚本地址 (支持 http:// 或 file://)" marginTop="10" textColor="#666666" textSize="12sp"/>
+                <input id="url" hint="云端链接或本地路径" textSize="14sp" lines="2"/>
+                
+                <text text="最大随机延迟 (分钟)" marginTop="10" textColor="#666666" textSize="12sp"/>
+                <seekbar id="delay" max="30" progress="0"/>
+                <text id="delay_text" text="0 分钟" gravity="right" textColor="#009688"/>
+            </vertical>
+        </card>
 
-// 全局状态
-var floatyWindow = null;
-var isRunning = false;
-var currentExecution = null;
+        <button id="save" text="保存配置" style="Widget.AppCompat.Button.Colored" margin="0 10"/>
+        <button id="btn_exec" text="立即执行" bg="#4caf50" textColor="#ffffff" margin="0 5"/>
+        
+        <text id="status" text="就绪" gravity="center" marginTop="20" textColor="#666666"/>
+    </vertical>
+);
 
-/**
- * 创建状态悬浮窗
- * @returns {Object} 悬浮窗对象
- */
-function createStatusFloaty() {
-    if (floatyWindow) {
-        try {
-            floatyWindow.close();
-        } catch (e) {}
+// 2. 初始化配置
+var storage = storages.create("CLOCKMASTER_CONFIG");
+ui.token.setText(storage.get("token", ""));
+ui.pkg.setText(storage.get("package_name", "云办公")); 
+// 自动填入正确的本地路径示例（注意这里我也帮你改成了 cloud/core_task.js）
+ui.url.setText(storage.get("script_url", "file:///sdcard/脚本/Project_ClockMaster/cloud/core_task.js"));
+ui.delay.setProgress(storage.get("random_delay", 0));
+ui.delay_text.setText(ui.delay.getProgress() + " 分钟");
+
+// UI 事件监听
+ui.delay.setOnSeekBarChangeListener({
+    onProgressChanged: function(seekBar, progress, fromUser) {
+        ui.delay_text.setText(progress + " 分钟");
     }
-
-    floatyWindow = floaty.rawWindow(
-        '<frame gravity="center" bg="#AA000000" padding="12">' +
-        '    <text id="status" text="ClockMaster" textSize="14sp" textColor="#FFFFFF"/>' +
-        '</frame>'
-    );
-
-    floatyWindow.setPosition(50, 200);
-    floatyWindow.setTouchable(false);
-
-    return floatyWindow;
-}
-
-/**
- * 更新悬浮窗状态
- * @param {string} status - 状态文本
- */
-function updateFloatyStatus(status) {
-    if (floatyWindow) {
-        ui.run(function() {
-            try {
-                floatyWindow.status.setText(status);
-            } catch (e) {}
-        });
-    }
-}
-
-/**
- * 关闭悬浮窗
- */
-function closeFloaty() {
-    if (floatyWindow) {
-        try {
-            floatyWindow.close();
-            floatyWindow = null;
-        } catch (e) {}
-    }
-}
-
-/**
- * 执行核心任务
- * @param {Object} config - 配置对象
- * @param {string} source - 触发来源 (manual/scheduled)
- */
-function executeTask(config, source) {
-    source = source || "manual";
-
-    if (isRunning) {
-        toast("任务正在执行中...");
-        return;
-    }
-
-    isRunning = true;
-    var startTime = Date.now();
-
-    // 确认对话框
-    dialogs.build({
-        title: "确认执行",
-        content: "即将开始执行打卡任务。\n\n" +
-                 "目标App: " + (config.targetAppPackage || "未设置") + "\n" +
-                 "最大延迟: " + config.maxRandomDelay + " 分钟",
-        positive: "开始执行",
-        negative: "取消"
-    }).on("positive", function() {
-        // 创建状态悬浮窗
-        createStatusFloaty();
-
-        // 设置Launcher状态回调
-        Launcher.setStatusCallback(function(status) {
-            updateFloatyStatus(status);
-        });
-
-        // 启动任务
-        threads.start(function() {
-            var success = false;
-            var errorMsg = null;
-
-            try {
-                success = Launcher.launch(config);
-
-                if (success) {
-                    updateFloatyStatus("任务已启动，请等待...");
-                } else {
-                    updateFloatyStatus("启动失败");
-                    errorMsg = "Launcher启动失败";
-                }
-            } catch (e) {
-                console.error(e);
-                updateFloatyStatus("错误: " + e.message);
-                errorMsg = e.message;
-                success = false;
-            } finally {
-                // 记录执行历史
-                var duration = Date.now() - startTime;
-                History.add({
-                    success: success,
-                    duration: duration,
-                    errorMsg: errorMsg,
-                    source: source,
-                    scriptVersion: Launcher.checkAvailability().version || "unknown"
-                });
-
-                // 延迟关闭悬浮窗
-                setTimeout(function() {
-                    closeFloaty();
-                    isRunning = false;
-
-                    // 更新UI状态
-                    ui.run(function() {
-                        UIPresenter.updateStatusDisplay();
-                    });
-                }, 3000);
-            }
-        });
-
-    }).on("negative", function() {
-        isRunning = false;
-    }).show();
-}
-
-/**
- * 强制更新脚本
- * @param {string} url - 脚本URL
- */
-function forceUpdateScript(url) {
-    var loadingDialog = UIPresenter.showLoading("正在更新脚本...");
-
-    threads.start(function() {
-        var success = Launcher.forceUpdate(url);
-
-        ui.run(function() {
-            loadingDialog.dismiss();
-
-            if (success) {
-                var info = Launcher.checkAvailability();
-                dialogs.alert("更新成功", "脚本已更新到 v" + info.version);
-            } else {
-                dialogs.alert("更新失败", "无法获取云端脚本，请检查网络和URL");
-            }
-        });
-    });
-}
-
-/**
- * 运行权限检查向导
- */
-function runPermissionWizard() {
-    Permission.runWizard(function(allGranted) {
-        if (allGranted) {
-            toast("所有权限已就绪");
-            UIPresenter.updatePermissionStatus(Permission.checkAll());
-        } else {
-            dialogs.alert("权限不足", "部分必要权限未授予，可能影响正常使用。");
-        }
-    });
-}
-
-/**
- * 应用初始化
- */
-function initialize() {
-    log("====== ClockMaster 启动 ======");
-    log("设备: " + device.brand + " " + device.model);
-    log("Android: " + device.release + " (SDK " + device.sdkInt + ")");
-
-    // 检查权限状态
-    var permStatus = Permission.quickCheck();
-    log("权限状态: " + permStatus.message);
-
-    // 初始化定时任务
-    var scheduleCount = Scheduler.initAllSchedules();
-    log("定时任务: " + scheduleCount + " 个");
-
-    // 如果权限不完整，先运行向导
-    if (!permStatus.passed) {
-        Permission.runWizard(function(allGranted) {
-            showMainUI();
-            if (!allGranted) {
-                toast("部分权限未授予，可能影响功能");
-            }
-        });
-    } else {
-        showMainUI();
-    }
-}
-
-/**
- * 显示主界面
- */
-function showMainUI() {
-    UIPresenter.show({
-        // 保存配置回调
-        onSave: function(config) {
-            log("配置已保存");
-        },
-
-        // 执行任务回调
-        onRun: function(config) {
-            var permStatus = Permission.quickCheck();
-            if (!permStatus.passed) {
-                dialogs.alert("权限不足", permStatus.message + "\n\n请先授予必要权限。");
-                return;
-            }
-            executeTask(config, "manual");
-        },
-
-        // 权限检查回调
-        onPermission: function() {
-            runPermissionWizard();
-        },
-
-        // 强制更新回调
-        onForceUpdate: function(url) {
-            forceUpdateScript(url);
-        }
-    });
-
-    // 显示脚本状态
-    var availability = Launcher.checkAvailability();
-    if (availability.available) {
-        log("本地脚本: v" + availability.version + " (" + availability.lastUpdateStr + ")");
-    } else {
-        log("本地脚本: 无备份");
-    }
-
-    // 显示历史统计
-    var stats = History.getStats();
-    log("执行统计: " + stats.total + " 次, 成功率 " + stats.successRate + "%");
-}
-
-/**
- * 清理资源
- */
-function cleanup() {
-    closeFloaty();
-    Scheduler.cancelAllSchedules();
-    log("====== ClockMaster 已退出 ======");
-}
-
-// 监听退出事件
-events.on("exit", function() {
-    cleanup();
 });
 
-// 启动应用
-initialize();
+ui.save.click(() => {
+    storage.put("token", ui.token.text());
+    storage.put("package_name", ui.pkg.text());
+    storage.put("script_url", ui.url.text());
+    storage.put("random_delay", ui.delay.getProgress());
+    toast("✅ 配置已保存");
+});
+
+// 修改点2：使用新的ID绑定点击事件
+ui.btn_exec.click(() => {
+    // 保存最新配置
+    ui.save.performClick();
+    
+    // 启动新线程执行，防止卡死 UI
+    threads.start(function() {
+        runScript();
+    });
+});
+
+// 3. 核心加载逻辑
+function runScript() {
+    updateStatus("正在检查权限...");
+    if (!checkPermissions()) return;
+
+    var url = ui.url.text();
+    var scriptCode = "";
+
+    try {
+        updateStatus("正在加载脚本...");
+        
+        if (url.startsWith("file://")) {
+            var path = url.replace("file://", "");
+            if (!files.exists(path)) throw new Error("文件不存在: " + path);
+            scriptCode = files.read(path);
+            log("加载本地文件成功");
+        } else if (url.startsWith("http")) {
+            var res = http.get(url);
+            if (res.statusCode != 200) throw new Error("网络请求失败: " + res.statusCode);
+            scriptCode = res.body.string();
+            log("下载云端脚本成功");
+        } else {
+            throw new Error("不支持的协议，请以 file:// 或 http:// 开头");
+        }
+
+        updateStatus("脚本执行中...");
+        // 动态执行代码
+        engines.execScript("CoreTask", scriptCode);
+        
+    } catch (e) {
+        console.error(e);
+        updateStatus("错误: " + e.message);
+        alert("执行失败", e.message);
+    }
+}
+
+function updateStatus(msg) {
+    // 这里 ui.run 就可以正常作为系统函数使用了
+    ui.run(() => { ui.status.setText(msg); });
+}
+
+function checkPermissions() {
+    if (!auto.service) {
+        alert("权限缺失", "请开启无障碍服务");
+        app.startActivity({ action: "android.settings.ACCESSIBILITY_SETTINGS" });
+        return false;
+    }
+    if (!floaty.checkPermission()) {
+        alert("权限缺失", "请开启悬浮窗权限");
+        floaty.requestPermission();
+        return false;
+    }
+    return true;
+}
