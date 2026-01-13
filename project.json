@@ -1,9 +1,7 @@
 {
   "abis": [
     "arm64-v8a",
-    "armeabi-v7a",
-    "x86",
-    "x86_64"
+    "armeabi-v7a"
   ],
   "assets": [],
   "buildDir": "build",
@@ -41,10 +39,10 @@
   "projectDirectory": "/storage/emulated/0/脚本/ClockMaster",
   "scripts": {},
   "signingConfig": {
-    "alias": null,
-    "keystore": null
+    "alias": "mm",
+    "keystore": "/storage/emulated/0/脚本/.keyStore/AutoX.keystore"
   },
   "sourcePath": "/storage/emulated/0/脚本/ClockMaster/app/main.js",
-  "versionCode": 6,
-  "versionName": "3.0.3"
+  "versionCode": 7,
+  "versionName": "3.0.4"
 }
