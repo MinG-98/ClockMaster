@@ -337,4 +337,4 @@ Scheduler.executeScheduledTask(id)
 ---
 
 **发布时间**: 2026-01-13
-**开发者**: MinG-98 & Claude Sonnet 4.5
+**开发者**: MinG-98

@@ -4,7 +4,7 @@
 2026年1月13日
 
 ## 👤 开发者
-MinG-98 & Claude Code
+MinG-98
 
 ---
 

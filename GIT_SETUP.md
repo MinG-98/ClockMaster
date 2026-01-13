@@ -15,7 +15,7 @@
 ### 自动认证
 - ✅ 推送到 GitHub 无需密码
 - ✅ 推送到 Gitee 无需密码
-- ✅ Claude Code 可以自动连接
+- ✅ 开发工具可以自动连接
 
 ---
 
@@ -74,9 +74,9 @@ git push gitee main
 git push --all
 ```
 
-### 方式3: Claude Code 自动操作
+### 方式3: 自动化工具操作
 
-当你下次打开 Claude Code 时，它可以直接：
+使用开发工具时，可以直接：
 - ✅ 读取代码
 - ✅ 修改代码
 - ✅ 提交更改
@@ -92,7 +92,7 @@ git push --all
 # 编辑文件
 vim cloud/core_task.js
 
-# 或使用 Claude Code 编辑
+# 或使用其他编辑器
 ```
 
 ### 2. 同步到远程
@@ -195,7 +195,7 @@ git log --oneline -5
 ## 💡 提示
 
 - ✅ SSH 密钥永久有效，无需每次输入密码
-- ✅ Claude Code 可以自动推送，无需手动操作
+- ✅ 开发工具可以自动推送，无需手动操作
 - ✅ 一键脚本简化日常工作流程
 - ✅ 国内用户推荐使用 Gitee Raw URL（速度更快）
 

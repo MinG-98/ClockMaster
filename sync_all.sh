@@ -26,7 +26,6 @@ if [[ -n $(git status -s) ]]; then
 
     git commit -m "$commit_msg
 
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
     echo "✅ 提交完成"
 else
     echo "ℹ️  没有新的更改需要提交"
