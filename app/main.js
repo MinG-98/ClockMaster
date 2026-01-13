@@ -205,7 +205,7 @@ function loadSchedule() {
 
     // 检查是否有任务启用
     var hasEnabled = (workSchedule && workSchedule.enabled) || (offworkSchedule && offworkSchedule.enabled);
-    ui.schedule_switch.setChecked(hasEnabled);
+    ui.schedule_switch.setChecked(hasEnabled === true);
 
     // 显示下次执行时间
     if (hasEnabled) {
@@ -213,12 +213,16 @@ function loadSchedule() {
 
         if (workSchedule && workSchedule.enabled) {
             var workNext = Scheduler.getNextExecutionTime(workSchedule.hour, workSchedule.minute);
-            nextTimes.push("上班: " + workNext.toLocaleTimeString("zh-CN", {hour: '2-digit', minute: '2-digit'}));
+            var workHour = workNext.getHours();
+            var workMin = workNext.getMinutes();
+            nextTimes.push("上班: " + (workHour < 10 ? "0" : "") + workHour + ":" + (workMin < 10 ? "0" : "") + workMin);
         }
 
         if (offworkSchedule && offworkSchedule.enabled) {
             var offworkNext = Scheduler.getNextExecutionTime(offworkSchedule.hour, offworkSchedule.minute);
-            nextTimes.push("下班: " + offworkNext.toLocaleTimeString("zh-CN", {hour: '2-digit', minute: '2-digit'}));
+            var offworkHour = offworkNext.getHours();
+            var offworkMin = offworkNext.getMinutes();
+            nextTimes.push("下班: " + (offworkHour < 10 ? "0" : "") + offworkHour + ":" + (offworkMin < 10 ? "0" : "") + offworkMin);
         }
 
         ui.next_exec.setText("下次执行: " + nextTimes.join(" | "));
