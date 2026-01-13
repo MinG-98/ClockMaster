@@ -383,102 +383,78 @@ ui.schedule_switch.on("check", function(checked) {
 
 // 上班时间选择
 ui.time_work_btn.click(function() {
-    dialogs.build({
-        title: "设置上班打卡时间",
-        content: "请输入时间 (格式: HH:MM)",
-        inputHint: "09:00",
-        inputPrefill: ui.time_work_btn.getText(),
-        positive: "确定",
-        negative: "取消"
-    }).on("positive", function(text) {
-        var match = text.match(/^(\d{1,2}):(\d{2})$/);
-        if (match) {
-            var hour = parseInt(match[1]);
-            var minute = parseInt(match[2]);
+    var currentTime = String(ui.time_work_btn.getText());
+    threads.start(function() {
+        var text = rawInput("设置上班打卡时间 (HH:MM)", currentTime);
+        if (text === null || text === "") return;
+
+        var parts = String(text).split(":");
+        if (parts.length === 2) {
+            var hour = parseInt(parts[0]);
+            var minute = parseInt(parts[1]);
 
             if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
-                ui.time_work_btn.setText(Scheduler.formatTime(hour, minute));
-
-                // 更新或创建上班打卡任务
                 var schedules = Scheduler.getSchedules();
-                var workSchedule = null;
-
                 for (var i = 0; i < schedules.length; i++) {
                     if (schedules[i].label === "上班打卡") {
-                        workSchedule = schedules[i];
+                        Scheduler.updateSchedule(schedules[i].id, { hour: hour, minute: minute });
                         break;
                     }
                 }
 
-                if (workSchedule) {
-                    Scheduler.updateSchedule(workSchedule.id, {
-                        hour: hour,
-                        minute: minute
-                    });
-                }
-
-                if (ui.schedule_switch.isChecked()) {
-                    loadSchedule();
-                }
-
-                toast("✅ 上班打卡时间已设置");
+                var timeStr = Scheduler.formatTime(hour, minute);
+                ui.run(function() {
+                    ui.time_work_btn.setText(timeStr);
+                    if (ui.schedule_switch.isChecked()) {
+                        loadSchedule();
+                    }
+                });
+                toast("上班时间已设置: " + timeStr);
             } else {
-                toast("❌ 时间格式错误");
+                toast("时间无效，小时0-23，分钟0-59");
             }
         } else {
-            toast("❌ 请输入正确格式 (HH:MM)");
+            toast("格式错误，请输入 HH:MM");
         }
-    }).show();
+    });
 });
 
 // 下班时间选择
 ui.time_offwork_btn.click(function() {
-    dialogs.build({
-        title: "设置下班打卡时间",
-        content: "请输入时间 (格式: HH:MM)",
-        inputHint: "18:00",
-        inputPrefill: ui.time_offwork_btn.getText(),
-        positive: "确定",
-        negative: "取消"
-    }).on("positive", function(text) {
-        var match = text.match(/^(\d{1,2}):(\d{2})$/);
-        if (match) {
-            var hour = parseInt(match[1]);
-            var minute = parseInt(match[2]);
+    var currentTime = String(ui.time_offwork_btn.getText());
+    threads.start(function() {
+        var text = rawInput("设置下班打卡时间 (HH:MM)", currentTime);
+        if (text === null || text === "") return;
+
+        var parts = String(text).split(":");
+        if (parts.length === 2) {
+            var hour = parseInt(parts[0]);
+            var minute = parseInt(parts[1]);
 
             if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
-                ui.time_offwork_btn.setText(Scheduler.formatTime(hour, minute));
-
-                // 更新或创建下班打卡任务
                 var schedules = Scheduler.getSchedules();
-                var offworkSchedule = null;
-
                 for (var i = 0; i < schedules.length; i++) {
                     if (schedules[i].label === "下班打卡") {
-                        offworkSchedule = schedules[i];
+                        Scheduler.updateSchedule(schedules[i].id, { hour: hour, minute: minute });
                         break;
                     }
                 }
 
-                if (offworkSchedule) {
-                    Scheduler.updateSchedule(offworkSchedule.id, {
-                        hour: hour,
-                        minute: minute
-                    });
-                }
-
-                if (ui.schedule_switch.isChecked()) {
-                    loadSchedule();
-                }
-
-                toast("✅ 下班时间已设置");
+                var timeStr = Scheduler.formatTime(hour, minute);
+                ui.run(function() {
+                    ui.time_offwork_btn.setText(timeStr);
+                    if (ui.schedule_switch.isChecked()) {
+                        loadSchedule();
+                    }
+                });
+                toast("下班时间已设置: " + timeStr);
             } else {
-                toast("❌ 时间格式错误");
+                toast("时间无效，小时0-23，分钟0-59");
             }
         } else {
-            toast("请输入正确格式 (HH:MM)");
+            toast("格式错误，请输入 HH:MM");
         }
-    }).show();
+    });
 });
 
 // 测试推送
