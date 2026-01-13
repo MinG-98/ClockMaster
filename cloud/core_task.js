@@ -228,7 +228,7 @@ function performClockInAction() {
     var anchor = text("快捷打卡").findOne(2000);
     if (anchor) {
         targetX = centerX;
-        targetY = anchor.bounds().bottom + (device.height * 0.25);
+        targetY = anchor.bounds().bottom + (device.height * 0.30);
         strategy = "A-锚点定位";
         log("策略A成功: 锚点Y=" + anchor.bounds().bottom + ", 目标Y=" + targetY);
     }
