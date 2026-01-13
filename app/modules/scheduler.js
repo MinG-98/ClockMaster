@@ -1,19 +1,29 @@
 /**
- * scheduler.js - 定时任务模块
- * ClockMaster - Scheduled Task Module
+ * scheduler.js - 高稳定性定时任务模块
+ * ClockMaster - High Stability Scheduled Task Module
  *
- * 支持设置每日定时打卡
+ * 多重保障机制:
+ * 1. Android AlarmManager 系统级定时
+ * 2. 前台服务保活
+ * 3. 启动时自动检测执行
+ * 4. 支持外部 Intent 触发
  */
 
 var Storage = require("./storage.js");
 
+// Android 类引用
+var Context = context;
+var AlarmManager = Context.getSystemService(Context.ALARM_SERVICE);
+var PendingIntent = android.app.PendingIntent;
+var Intent = android.content.Intent;
+
 // 定时任务存储键
 var SCHEDULE_KEY = "clockmaster_schedules";
+var LAST_TRIGGER_KEY = "clockmaster_last_trigger";
 
 var Scheduler = {
     /**
      * 获取所有定时任务
-     * @returns {Array} 定时任务列表
      */
     getSchedules: function() {
         var schedules = Storage.get(SCHEDULE_KEY, []);
@@ -22,7 +32,6 @@ var Scheduler = {
 
     /**
      * 保存定时任务列表
-     * @param {Array} schedules - 定时任务列表
      */
     saveSchedules: function(schedules) {
         Storage.set(SCHEDULE_KEY, schedules);
@@ -30,8 +39,6 @@ var Scheduler = {
 
     /**
      * 添加定时任务
-     * @param {Object} schedule - {hour, minute, enabled, label}
-     * @returns {string} 任务ID
      */
     addSchedule: function(schedule) {
         var schedules = this.getSchedules();
@@ -47,15 +54,16 @@ var Scheduler = {
         });
 
         this.saveSchedules(schedules);
-        this.setupAlarm(id, schedule.hour, schedule.minute);
+
+        if (schedule.enabled !== false) {
+            this.setSystemAlarm(id, schedule.hour, schedule.minute);
+        }
 
         return id;
     },
 
     /**
      * 更新定时任务
-     * @param {string} id - 任务ID
-     * @param {Object} updates - 更新内容
      */
     updateSchedule: function(id, updates) {
         var schedules = this.getSchedules();
@@ -70,11 +78,10 @@ var Scheduler = {
 
                 this.saveSchedules(schedules);
 
-                // 重新设置闹钟
                 if (schedules[i].enabled) {
-                    this.setupAlarm(id, schedules[i].hour, schedules[i].minute);
+                    this.setSystemAlarm(id, schedules[i].hour, schedules[i].minute);
                 } else {
-                    this.cancelAlarm(id);
+                    this.cancelSystemAlarm(id);
                 }
 
                 return true;
@@ -86,7 +93,6 @@ var Scheduler = {
 
     /**
      * 删除定时任务
-     * @param {string} id - 任务ID
      */
     removeSchedule: function(id) {
         var schedules = this.getSchedules();
@@ -99,107 +105,200 @@ var Scheduler = {
         }
 
         this.saveSchedules(newSchedules);
-        this.cancelAlarm(id);
+        this.cancelSystemAlarm(id);
     },
 
     /**
-     * 设置系统闹钟
-     * @param {string} id - 任务ID
-     * @param {number} hour - 小时
-     * @param {number} minute - 分钟
+     * 设置系统级闹钟 (AlarmManager)
      */
-    setupAlarm: function(id, hour, minute) {
+    setSystemAlarm: function(id, hour, minute) {
         try {
-            // 计算下次执行时间
-            var now = new Date();
-            var targetTime = new Date();
-            targetTime.setHours(hour, minute, 0, 0);
+            var targetTime = this.getNextExecutionTime(hour, minute);
+            var triggerTime = targetTime.getTime();
 
-            // 如果今天的时间已过，设置为明天
-            if (targetTime.getTime() <= now.getTime()) {
-                targetTime.setDate(targetTime.getDate() + 1);
+            log("[Scheduler] 设置系统闹钟: " + id + " -> " + hour + ":" + minute);
+            log("[Scheduler] 触发时间: " + targetTime.toLocaleString());
+
+            // 创建唤醒 Intent
+            var intent = new Intent(Context, Context.getClass());
+            intent.setAction("com.m1n6.clockmaster.ALARM_TRIGGER");
+            intent.putExtra("schedule_id", id);
+            intent.putExtra("trigger_time", triggerTime);
+
+            // 生成唯一的请求码
+            var requestCode = Math.abs(id.hashCode());
+
+            var pendingIntent = PendingIntent.getBroadcast(
+                Context,
+                requestCode,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+
+            // 使用精确闹钟 (Android 6.0+)
+            if (android.os.Build.VERSION.SDK_INT >= 23) {
+                AlarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerTime,
+                    pendingIntent
+                );
+            } else {
+                AlarmManager.setExact(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerTime,
+                    pendingIntent
+                );
             }
 
-            var delay = targetTime.getTime() - now.getTime();
-
-            log("设置定时任务: " + id + " -> " + hour + ":" + minute + " (延迟 " + Math.round(delay / 60000) + " 分钟)");
-
-            // 使用 Timers 设置定时
-            // 注意: Auto.js 的 setInterval/setTimeout 在脚本退出后不会保持
-            // 这里使用 threads 保持运行
-
-            // 存储定时器ID以便取消
-            if (!this._timers) {
-                this._timers = {};
-            }
-
-            // 取消旧的定时器
-            if (this._timers[id]) {
-                clearTimeout(this._timers[id]);
-            }
-
-            var self = this;
-            this._timers[id] = setTimeout(function() {
-                self.executeScheduledTask(id);
-            }, delay);
+            // 同时设置内部定时器作为备份
+            this.setBackupTimer(id, hour, minute, triggerTime);
 
             return true;
         } catch (e) {
-            log("设置闹钟失败: " + e.message);
+            log("[Scheduler] 设置系统闹钟失败: " + e.message);
+            // 降级使用内部定时器
+            this.setBackupTimer(id, hour, minute);
             return false;
         }
     },
 
     /**
-     * 取消闹钟
-     * @param {string} id - 任务ID
+     * 设置备份定时器
      */
-    cancelAlarm: function(id) {
+    setBackupTimer: function(id, hour, minute, triggerTime) {
+        if (!this._timers) {
+            this._timers = {};
+        }
+
+        if (this._timers[id]) {
+            clearTimeout(this._timers[id]);
+        }
+
+        var now = Date.now();
+        if (!triggerTime) {
+            triggerTime = this.getNextExecutionTime(hour, minute).getTime();
+        }
+
+        var delay = triggerTime - now;
+        if (delay < 0) delay = 0;
+
+        var self = this;
+        this._timers[id] = setTimeout(function() {
+            self.executeScheduledTask(id);
+        }, delay);
+
+        log("[Scheduler] 备份定时器已设置: " + id + " (延迟 " + Math.round(delay / 60000) + " 分钟)");
+    },
+
+    /**
+     * 取消系统闘钟
+     */
+    cancelSystemAlarm: function(id) {
+        try {
+            var intent = new Intent(Context, Context.getClass());
+            intent.setAction("com.m1n6.clockmaster.ALARM_TRIGGER");
+
+            var requestCode = Math.abs(id.hashCode());
+            var pendingIntent = PendingIntent.getBroadcast(
+                Context,
+                requestCode,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+
+            AlarmManager.cancel(pendingIntent);
+            log("[Scheduler] 系统闹钟已取消: " + id);
+        } catch (e) {
+            log("[Scheduler] 取消系统闹钟失败: " + e.message);
+        }
+
+        // 同时取消备份定时器
         if (this._timers && this._timers[id]) {
             clearTimeout(this._timers[id]);
             delete this._timers[id];
-            log("取消定时任务: " + id);
         }
     },
 
     /**
      * 执行定时任务
-     * @param {string} id - 任务ID
      */
     executeScheduledTask: function(id) {
-        log("定时任务触发: " + id);
+        log("[Scheduler] ========== 定时任务触发 ==========");
+        log("[Scheduler] 任务ID: " + id);
+        log("[Scheduler] 触发时间: " + new Date().toLocaleString());
 
         try {
-            // 获取配置
-            var config = Storage.getAll();
-
-            // 验证配置
-            var validation = Storage.validate();
-            if (!validation.valid) {
-                log("配置不完整，跳过执行");
-                return;
-            }
+            // 记录触发时间
+            Storage.set(LAST_TRIGGER_KEY, {
+                id: id,
+                time: Date.now()
+            });
 
             // 唤醒设备
             device.wakeUpIfNeeded();
             sleep(1000);
 
+            // 验证配置
+            var validation = Storage.validate();
+            if (!validation.valid) {
+                log("[Scheduler] 配置不完整，跳过执行: " + validation.missing.join(", "));
+                return false;
+            }
+
             // 启动核心任务
             var Launcher = require("./launcher.js");
-            Launcher.launch(config);
+            var success = Launcher.launch();
 
-            // 重新设置下一天的闘钟
+            // 设置下一天的闹钟
             var schedules = this.getSchedules();
             for (var i = 0; i < schedules.length; i++) {
                 if (schedules[i].id === id && schedules[i].enabled) {
-                    this.setupAlarm(id, schedules[i].hour, schedules[i].minute);
+                    this.setSystemAlarm(id, schedules[i].hour, schedules[i].minute);
                     break;
                 }
             }
 
+            return success;
         } catch (e) {
-            log("执行定时任务失败: " + e.message);
+            log("[Scheduler] 执行定时任务失败: " + e.message);
+            return false;
         }
+    },
+
+    /**
+     * 启动时检查是否需要执行任务
+     * (用于处理 APP 被杀死后重新启动的情况)
+     */
+    checkAndExecuteOnStartup: function() {
+        log("[Scheduler] 检查启动时是否需要执行任务...");
+
+        var schedules = this.getSchedules();
+        var now = new Date();
+        var currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+        for (var i = 0; i < schedules.length; i++) {
+            var schedule = schedules[i];
+            if (!schedule.enabled) continue;
+
+            var scheduleMinutes = schedule.hour * 60 + schedule.minute;
+
+            // 检查是否在任务时间的 5 分钟窗口内
+            var diff = currentMinutes - scheduleMinutes;
+            if (diff >= 0 && diff <= 5) {
+                // 检查今天是否已经执行过
+                var lastTrigger = Storage.get(LAST_TRIGGER_KEY, null);
+                var today = now.toDateString();
+
+                if (!lastTrigger || new Date(lastTrigger.time).toDateString() !== today) {
+                    log("[Scheduler] 发现未执行的定时任务: " + schedule.label);
+                    toast("检测到定时任务，正在执行: " + schedule.label);
+                    this.executeScheduledTask(schedule.id);
+                    return true;
+                }
+            }
+        }
+
+        return false;
     },
 
     /**
@@ -211,7 +310,7 @@ var Scheduler = {
 
         for (var i = 0; i < schedules.length; i++) {
             if (schedules[i].enabled) {
-                this.setupAlarm(
+                this.setSystemAlarm(
                     schedules[i].id,
                     schedules[i].hour,
                     schedules[i].minute
@@ -220,7 +319,11 @@ var Scheduler = {
             }
         }
 
-        log("初始化定时任务: " + count + " 个");
+        log("[Scheduler] 初始化定时任务: " + count + " 个");
+
+        // 启动时检查是否有遗漏的任务
+        this.checkAndExecuteOnStartup();
+
         return count;
     },
 
@@ -228,6 +331,11 @@ var Scheduler = {
      * 取消所有定时任务
      */
     cancelAllSchedules: function() {
+        var schedules = this.getSchedules();
+        for (var i = 0; i < schedules.length; i++) {
+            this.cancelSystemAlarm(schedules[i].id);
+        }
+
         if (this._timers) {
             for (var id in this._timers) {
                 if (this._timers.hasOwnProperty(id)) {
@@ -236,14 +344,12 @@ var Scheduler = {
             }
             this._timers = {};
         }
-        log("所有定时任务已取消");
+
+        log("[Scheduler] 所有定时任务已取消");
     },
 
     /**
      * 格式化时间显示
-     * @param {number} hour - 小时
-     * @param {number} minute - 分钟
-     * @returns {string}
      */
     formatTime: function(hour, minute) {
         var h = hour < 10 ? "0" + hour : hour;
@@ -253,9 +359,6 @@ var Scheduler = {
 
     /**
      * 获取下次执行时间
-     * @param {number} hour - 小时
-     * @param {number} minute - 分钟
-     * @returns {Date}
      */
     getNextExecutionTime: function(hour, minute) {
         var now = new Date();
@@ -267,6 +370,28 @@ var Scheduler = {
         }
 
         return next;
+    },
+
+    /**
+     * 获取所有定时任务状态信息
+     */
+    getStatusInfo: function() {
+        var schedules = this.getSchedules();
+        var info = [];
+
+        for (var i = 0; i < schedules.length; i++) {
+            var s = schedules[i];
+            if (s.enabled) {
+                var next = this.getNextExecutionTime(s.hour, s.minute);
+                info.push({
+                    label: s.label,
+                    time: this.formatTime(s.hour, s.minute),
+                    nextExecution: next.toLocaleString()
+                });
+            }
+        }
+
+        return info;
     }
 };
 
