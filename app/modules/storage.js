@@ -12,7 +12,7 @@ var configStorage = storages.create(CONFIG_NAME);
 var DEFAULT_CONFIG = {
     pushplusToken: "45552f26c7f949d09a135ff0caec71f6",
     maxRandomDelay: 5,          // 最大随机延迟(分钟)
-    targetAppPackage: "农商云办公",       // 目标App包名
+    targetAppPackage: "",       // 目标App包名
     cloudScriptUrl: "file:///sdcard/脚本/ClockMaster/cloud/core_task.js",         // 云端脚本URL
     lastUpdateTime: 0,          // 上次更新时间
     debugMode: false            // 调试模式

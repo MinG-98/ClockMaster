@@ -121,7 +121,7 @@ ClockMaster/
 
 1. **填写基础配置**:
    - PushPlus Token: 从 https://www.pushplus.plus 获取
-   - 目标App包名: 如 "农商云办公"
+   - 目标App包名: 如 "YourApp"
    - 云端脚本URL: GitHub/Gitee Raw 链接
    - 最大随机延迟: 建议 5-15 分钟
 
@@ -144,7 +144,7 @@ ClockMaster/
 ```json
 {
   "pushplusToken": "your_token_here",
-  "targetAppPackage": "农商云办公",
+  "targetAppPackage": "YourApp",
   "cloudScriptUrl": "https://raw.githubusercontent.com/MinG-98/ClockMaster/main/cloud/core_task.js",
   "maxRandomDelay": 10,
   "debugMode": false

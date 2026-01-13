@@ -21,7 +21,7 @@ ui.layout(
                 <input id="token" hint="用于推送通知" textSize="13sp" marginBottom="8"/>
 
                 <text text="目标App名称" textSize="11sp" textColor="#666666"/>
-                <input id="pkg" hint="如: 农商云办公" textSize="13sp" marginBottom="8"/>
+                <input id="pkg" hint="如: YourApp" textSize="13sp" marginBottom="8"/>
             </vertical>
         </card>
 
@@ -39,7 +39,7 @@ var storage = storages.create("clockmaster_config");
 
 // 加载配置
 ui.token.setText(storage.get("pushplusToken", "45552f26c7f949d09a135ff0caec71f6"));
-ui.pkg.setText(storage.get("targetAppPackage", "农商云办公"));
+ui.pkg.setText(storage.get("targetAppPackage", "YourApp"));
 
 // 保存配置
 ui.save_btn.click(function() {

@@ -57,7 +57,7 @@ MinG-98 & Claude Code
 function loadConfig() {
     var storage = storages.create("clockmaster_config");
     return {
-        targetAppName: storage.get("targetAppPackage", "农商云办公"),
+        targetAppName: storage.get("targetAppPackage", "YourApp"),
         maxDelay: parseInt(storage.get("maxRandomDelay", "0")),
         pushplusToken: storage.get("pushplusToken", ""),
         debugMode: storage.get("debugMode", false)
@@ -83,7 +83,7 @@ function loadConfig() {
     log("📂 从存储中读取配置");
     var storage = storages.create("clockmaster_config");
     return {
-        targetAppName: storage.get("targetAppPackage", "农商云办公"),
+        targetAppName: storage.get("targetAppPackage", "YourApp"),
         maxDelay: parseInt(storage.get("maxRandomDelay", "0")),
         pushplusToken: storage.get("pushplusToken", ""),
         debugMode: storage.get("debugMode", false)
@@ -152,7 +152,7 @@ execution.on("error", function(error) {
    ```javascript
    var DEFAULT_CONFIG = {
        pushplusToken: "45552f26c7f949d09a135ff0caec71f6",
-       targetAppPackage: "农商云办公",
+       targetAppPackage: "YourApp",
        cloudScriptUrl: "file:///sdcard/脚本/ClockMaster/cloud/core_task.js",
        // ...
    };
@@ -161,7 +161,7 @@ execution.on("error", function(error) {
 3. `app/main.js` (line 127-129)
    ```javascript
    ui.token.setText(config.pushplusToken || "45552f26c7f949d09a135ff0caec71f6");
-   ui.pkg.setText(config.targetAppPackage || "农商云办公");
+   ui.pkg.setText(config.targetAppPackage || "YourApp");
    ui.url.setText(config.cloudScriptUrl || "file:///sdcard/脚本/ClockMaster/cloud/core_task.js");
    ```
 

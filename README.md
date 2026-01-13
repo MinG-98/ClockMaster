@@ -91,7 +91,7 @@ ClockMaster/
    1. **授权权限** - 点击"检查权限"，按向导授予权限
    2. **填写配置**
       - PushPlus Token ([获取地址](https://www.pushplus.plus/))
-      - 目标 App 包名/名称（如：农商云办公）
+      - 目标 App 包名/名称（如：YourApp）
       - 云端脚本 URL（填写 GitHub/Gitee Raw URL）
       - 最大随机延迟（建议 5-15 分钟）
    3. **测试推送** - 点击"测试推送"验证配置
@@ -116,7 +116,7 @@ ClockMaster/
 | 配置项 | 说明 | 示例 |
 |--------|------|------|
 | PushPlus Token | 推送通知令牌 | `abc123...` |
-| 目标App包名 | 被自动化的应用 | `农商云办公` |
+| 目标App包名 | 被自动化的应用 | `YourApp` |
 | 云端脚本URL | core_task.js 的 Raw 地址 | `https://raw...` |
 | 最大随机延迟 | 执行前随机等待 (分钟) | `0-30` |
 | 调试模式 | 输出详细日志 | 开/关 |
@@ -140,7 +140,7 @@ ClockMaster/
 
 ```javascript
 // 修改目标应用名称
-var targetAppName = storage.get("targetAppPackage", "农商云办公");
+var targetAppName = storage.get("targetAppPackage", "YourApp");
 
 // 修改入口查找关键词
 var entry = text("移动考勤").findOne(5000);

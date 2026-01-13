@@ -53,7 +53,7 @@ ui.layout(
                 <input id="token" hint="用于推送通知" textSize="13sp" marginBottom="8"/>
 
                 <text text="目标App包名/名称" textSize="11sp" textColor="#666666"/>
-                <input id="pkg" hint="如: 农商云办公" textSize="13sp" marginBottom="8"/>
+                <input id="pkg" hint="如: YourApp" textSize="13sp" marginBottom="8"/>
 
                 <text text="云端脚本URL" textSize="11sp" textColor="#666666"/>
                 <input id="url" hint="GitHub/Gitee Raw URL" textSize="13sp" lines="2" marginBottom="8"/>
@@ -112,8 +112,8 @@ ui.layout(
 
         {/* 操作按钮 */}
         <horizontal marginTop="8">
-            <button id="save_btn" text="保存配置" style="Widget.AppCompat.Button.Colored" layout_weight="1" margin="0 4"/>
-            <button id="run_btn" text="立即执行" style="Widget.AppCompat.Button.Colored" layout_weight="1" margin="0 4" bg="#4CAF50"/>
+            <button id="save_btn" text="保存配置" w="0" layout_weight="1" marginRight="4" textColor="#FFFFFF" bg="#2196F3" h="48dp" textSize="14sp"/>
+            <button id="run_btn" text="立即执行" w="0" layout_weight="1" marginLeft="4" textColor="#FFFFFF" bg="#4CAF50" h="48dp" textSize="14sp"/>
         </horizontal>
     </vertical>
     </ScrollView>
@@ -125,7 +125,7 @@ ui.layout(
 function loadConfig() {
     var config = Storage.getAll();
     ui.token.setText(config.pushplusToken || "45552f26c7f949d09a135ff0caec71f6");
-    ui.pkg.setText(config.targetAppPackage || "农商云办公");
+    ui.pkg.setText(config.targetAppPackage || "YourApp");
     ui.url.setText(config.cloudScriptUrl || "file:///sdcard/脚本/ClockMaster/cloud/core_task.js");
 
     var delay = config.maxRandomDelay || 5;

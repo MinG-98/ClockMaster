@@ -243,7 +243,7 @@ function loadConfig() {
     var storage = storages.create("clockmaster_config");
 
     return {
-        targetAppName: storage.get("targetAppPackage", "农商云办公"),
+        targetAppName: storage.get("targetAppPackage", "目标应用"),
         maxDelay: parseInt(storage.get("maxRandomDelay", "0")),
         pushplusToken: storage.get("pushplusToken", ""),
         debugMode: storage.get("debugMode", false)
