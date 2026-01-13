@@ -151,7 +151,7 @@ execution.on("error", function(error) {
 2. `app/modules/storage.js` (line 12-16)
    ```javascript
    var DEFAULT_CONFIG = {
-       pushplusToken: "45552f26c7f949d09a135ff0caec71f6",
+       pushplusToken: "your_pushplus_token",
        targetAppPackage: "YourApp",
        cloudScriptUrl: "file:///sdcard/脚本/ClockMaster/cloud/core_task.js",
        // ...
@@ -160,7 +160,7 @@ execution.on("error", function(error) {
 
 3. `app/main.js` (line 127-129)
    ```javascript
-   ui.token.setText(config.pushplusToken || "45552f26c7f949d09a135ff0caec71f6");
+   ui.token.setText(config.pushplusToken || "your_pushplus_token");
    ui.pkg.setText(config.targetAppPackage || "YourApp");
    ui.url.setText(config.cloudScriptUrl || "file:///sdcard/脚本/ClockMaster/cloud/core_task.js");
    ```

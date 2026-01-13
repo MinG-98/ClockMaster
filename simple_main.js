@@ -38,7 +38,7 @@ ui.layout(
 var storage = storages.create("clockmaster_config");
 
 // 加载配置
-ui.token.setText(storage.get("pushplusToken", "45552f26c7f949d09a135ff0caec71f6"));
+ui.token.setText(storage.get("pushplusToken", "your_pushplus_token"));
 ui.pkg.setText(storage.get("targetAppPackage", "YourApp"));
 
 // 保存配置

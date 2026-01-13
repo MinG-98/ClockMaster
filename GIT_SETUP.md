@@ -25,7 +25,7 @@
 
 **公钥内容**:
 ```
-ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIACwmLiVDMm1Uog91FL+Id9TkVoUG0RmonHZFL7vXRYi luoyiming1998@gmail.com
+ssh-ed25519 AAAA...your_public_key... your_email@example.com
 ```
 
 **已添加到**:
@@ -152,7 +152,7 @@ Hi MinG(@MinG-98)! You've successfully authenticated...
 
 3. **重新生成密钥（如果需要）**:
    ```bash
-   ssh-keygen -t ed25519 -C "luoyiming1998@gmail.com"
+   ssh-keygen -t ed25519 -C "your_email@example.com"
    ```
 
 4. **添加到 SSH agent**:

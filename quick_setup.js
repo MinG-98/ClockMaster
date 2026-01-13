@@ -8,7 +8,7 @@ var Storage = require("./modules/storage.js");
 
 // 配置信息
 var config = {
-    pushplusToken: "45552f26c7f949d09a135ff0caec71f6",
+    pushplusToken: "your_pushplus_token",
     targetAppPackage: "",
     cloudScriptUrl: "file:///sdcard/脚本/ClockMaster/cloud/core_task.js",
     maxRandomDelay: 0,  // 测试时不延迟

@@ -133,7 +133,7 @@ ui.layout(
 // 加载配置
 function loadConfig() {
     var config = Storage.getAll();
-    ui.token.setText(config.pushplusToken || "45552f26c7f949d09a135ff0caec71f6");
+    ui.token.setText(config.pushplusToken || "your_pushplus_token");
     ui.pkg.setText(config.targetAppPackage || "YourApp");
     ui.url.setText(config.cloudScriptUrl || "file:///sdcard/脚本/ClockMaster/cloud/core_task.js");
 
