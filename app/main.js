@@ -69,15 +69,24 @@ ui.layout(
         {/* 定时任务卡片 */}
         <card cardCornerRadius="8dp" cardElevation="4dp" margin="0 5" bg="#ffffff">
             <vertical padding="16">
-                <horizontal>
-                    <text text="定时任务" textSize="14sp" textColor="#333333" textStyle="bold" layout_weight="1"/>
+                <horizontal marginBottom="8">
+                    <text text="定时打卡" textSize="14sp" textColor="#333333" textStyle="bold" layout_weight="1"/>
                     <Switch id="schedule_switch" checked="false"/>
                 </horizontal>
-                <horizontal marginTop="8">
-                    <text text="执行时间:" textSize="12sp" textColor="#666666"/>
-                    <button id="time_btn" text="09:00" style="Widget.AppCompat.Button.Borderless" textSize="14sp" textColor="#2196F3"/>
+
+                {/* 上班打卡 */}
+                <horizontal marginTop="4" marginBottom="4" bg="#F5F5F5" padding="8" cardCornerRadius="4dp">
+                    <text text="🌅 上班打卡" textSize="12sp" textColor="#666666" layout_weight="1"/>
+                    <button id="time_work_btn" text="09:00" style="Widget.AppCompat.Button.Borderless" textSize="14sp" textColor="#2196F3" minWidth="80dp"/>
                 </horizontal>
-                <text id="next_exec" text="" textSize="11sp" textColor="#999999" marginTop="2"/>
+
+                {/* 下班打卡 */}
+                <horizontal marginTop="4" marginBottom="4" bg="#F5F5F5" padding="8" cardCornerRadius="4dp">
+                    <text text="🌆 下班打卡" textSize="12sp" textColor="#666666" layout_weight="1"/>
+                    <button id="time_offwork_btn" text="18:00" style="Widget.AppCompat.Button.Borderless" textSize="14sp" textColor="#2196F3" minWidth="80dp"/>
+                </horizontal>
+
+                <text id="next_exec" text="" textSize="11sp" textColor="#999999" marginTop="4"/>
             </vertical>
         </card>
 
@@ -172,15 +181,49 @@ function updatePermissionStatus() {
 // 加载定时任务设置
 function loadSchedule() {
     var schedules = Scheduler.getSchedules();
-    if (schedules.length > 0) {
-        var schedule = schedules[0];
-        ui.schedule_switch.setChecked(schedule.enabled);
-        ui.time_btn.setText(Scheduler.formatTime(schedule.hour, schedule.minute));
 
-        if (schedule.enabled) {
-            var nextTime = Scheduler.getNextExecutionTime(schedule.hour, schedule.minute);
-            ui.next_exec.setText("下次执行: " + nextTime.toLocaleString());
+    // 查找上班和下班的定时任务
+    var workSchedule = null;
+    var offworkSchedule = null;
+
+    for (var i = 0; i < schedules.length; i++) {
+        if (schedules[i].label === "上班打卡") {
+            workSchedule = schedules[i];
+        } else if (schedules[i].label === "下班打卡") {
+            offworkSchedule = schedules[i];
         }
+    }
+
+    // 设置UI
+    if (workSchedule) {
+        ui.time_work_btn.setText(Scheduler.formatTime(workSchedule.hour, workSchedule.minute));
+    }
+
+    if (offworkSchedule) {
+        ui.time_offwork_btn.setText(Scheduler.formatTime(offworkSchedule.hour, offworkSchedule.minute));
+    }
+
+    // 检查是否有任务启用
+    var hasEnabled = (workSchedule && workSchedule.enabled) || (offworkSchedule && offworkSchedule.enabled);
+    ui.schedule_switch.setChecked(hasEnabled);
+
+    // 显示下次执行时间
+    if (hasEnabled) {
+        var nextTimes = [];
+
+        if (workSchedule && workSchedule.enabled) {
+            var workNext = Scheduler.getNextExecutionTime(workSchedule.hour, workSchedule.minute);
+            nextTimes.push("上班: " + workNext.toLocaleTimeString("zh-CN", {hour: '2-digit', minute: '2-digit'}));
+        }
+
+        if (offworkSchedule && offworkSchedule.enabled) {
+            var offworkNext = Scheduler.getNextExecutionTime(offworkSchedule.hour, offworkSchedule.minute);
+            nextTimes.push("下班: " + offworkNext.toLocaleTimeString("zh-CN", {hour: '2-digit', minute: '2-digit'}));
+        }
+
+        ui.next_exec.setText("下次执行: " + nextTimes.join(" | "));
+    } else {
+        ui.next_exec.setText("");
     }
 }
 
@@ -277,45 +320,70 @@ function executeTask() {
 // 定时开关
 ui.schedule_switch.on("check", function(checked) {
     var schedules = Scheduler.getSchedules();
-    var hour = 9;
-    var minute = 0;
 
-    if (schedules.length > 0) {
-        hour = schedules[0].hour;
-        minute = schedules[0].minute;
+    // 查找上班和下班任务
+    var workSchedule = null;
+    var offworkSchedule = null;
+
+    for (var i = 0; i < schedules.length; i++) {
+        if (schedules[i].label === "上班打卡") {
+            workSchedule = schedules[i];
+        } else if (schedules[i].label === "下班打卡") {
+            offworkSchedule = schedules[i];
+        }
     }
 
     if (checked) {
-        if (schedules.length === 0) {
+        // 创建或启用上班打卡任务
+        if (!workSchedule) {
+            var workTime = ui.time_work_btn.getText().split(":");
             Scheduler.addSchedule({
-                hour: hour,
-                minute: minute,
+                hour: parseInt(workTime[0]),
+                minute: parseInt(workTime[1]),
                 enabled: true,
-                label: "每日打卡"
+                label: "上班打卡"
             });
         } else {
-            Scheduler.updateSchedule(schedules[0].id, { enabled: true });
+            Scheduler.updateSchedule(workSchedule.id, { enabled: true });
         }
 
-        var nextTime = Scheduler.getNextExecutionTime(hour, minute);
-        ui.next_exec.setText("下次执行: " + nextTime.toLocaleString());
-        toast("定时任务已启用");
-    } else {
-        if (schedules.length > 0) {
-            Scheduler.updateSchedule(schedules[0].id, { enabled: false });
+        // 创建或启用下班打卡任务
+        if (!offworkSchedule) {
+            var offworkTime = ui.time_offwork_btn.getText().split(":");
+            Scheduler.addSchedule({
+                hour: parseInt(offworkTime[0]),
+                minute: parseInt(offworkTime[1]),
+                enabled: true,
+                label: "下班打卡"
+            });
+        } else {
+            Scheduler.updateSchedule(offworkSchedule.id, { enabled: true });
         }
+
+        // 更新显示
+        loadSchedule();
+        toast("✅ 定时打卡已启用");
+    } else {
+        // 禁用所有任务
+        if (workSchedule) {
+            Scheduler.updateSchedule(workSchedule.id, { enabled: false });
+        }
+        if (offworkSchedule) {
+            Scheduler.updateSchedule(offworkSchedule.id, { enabled: false });
+        }
+
         ui.next_exec.setText("");
-        toast("定时任务已关闭");
+        toast("❌ 定时打卡已关闭");
     }
 });
 
-// 时间选择
-ui.time_btn.click(function() {
+// 上班时间选择
+ui.time_work_btn.click(function() {
     dialogs.build({
-        title: "选择执行时间",
+        title: "设置上班打卡时间",
         content: "请输入时间 (格式: HH:MM)",
         inputHint: "09:00",
-        inputPrefill: ui.time_btn.getText(),
+        inputPrefill: ui.time_work_btn.getText(),
         positive: "确定",
         negative: "取消"
     }).on("positive", function(text) {
@@ -325,24 +393,83 @@ ui.time_btn.click(function() {
             var minute = parseInt(match[2]);
 
             if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
-                ui.time_btn.setText(Scheduler.formatTime(hour, minute));
+                ui.time_work_btn.setText(Scheduler.formatTime(hour, minute));
 
+                // 更新或创建上班打卡任务
                 var schedules = Scheduler.getSchedules();
-                if (schedules.length > 0) {
-                    Scheduler.updateSchedule(schedules[0].id, {
+                var workSchedule = null;
+
+                for (var i = 0; i < schedules.length; i++) {
+                    if (schedules[i].label === "上班打卡") {
+                        workSchedule = schedules[i];
+                        break;
+                    }
+                }
+
+                if (workSchedule) {
+                    Scheduler.updateSchedule(workSchedule.id, {
                         hour: hour,
                         minute: minute
                     });
                 }
 
                 if (ui.schedule_switch.isChecked()) {
-                    var nextTime = Scheduler.getNextExecutionTime(hour, minute);
-                    ui.next_exec.setText("下次执行: " + nextTime.toLocaleString());
+                    loadSchedule();
                 }
 
-                toast("时间已设置");
+                toast("✅ 上班打卡时间已设置");
             } else {
-                toast("时间格式错误");
+                toast("❌ 时间格式错误");
+            }
+        } else {
+            toast("❌ 请输入正确格式 (HH:MM)");
+        }
+    }).show();
+});
+
+// 下班时间选择
+ui.time_offwork_btn.click(function() {
+    dialogs.build({
+        title: "设置下班打卡时间",
+        content: "请输入时间 (格式: HH:MM)",
+        inputHint: "18:00",
+        inputPrefill: ui.time_offwork_btn.getText(),
+        positive: "确定",
+        negative: "取消"
+    }).on("positive", function(text) {
+        var match = text.match(/^(\d{1,2}):(\d{2})$/);
+        if (match) {
+            var hour = parseInt(match[1]);
+            var minute = parseInt(match[2]);
+
+            if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+                ui.time_offwork_btn.setText(Scheduler.formatTime(hour, minute));
+
+                // 更新或创建下班打卡任务
+                var schedules = Scheduler.getSchedules();
+                var offworkSchedule = null;
+
+                for (var i = 0; i < schedules.length; i++) {
+                    if (schedules[i].label === "下班打卡") {
+                        offworkSchedule = schedules[i];
+                        break;
+                    }
+                }
+
+                if (offworkSchedule) {
+                    Scheduler.updateSchedule(offworkSchedule.id, {
+                        hour: hour,
+                        minute: minute
+                    });
+                }
+
+                if (ui.schedule_switch.isChecked()) {
+                    loadSchedule();
+                }
+
+                toast("✅ 下班时间已设置");
+            } else {
+                toast("❌ 时间格式错误");
             }
         } else {
             toast("请输入正确格式 (HH:MM)");
