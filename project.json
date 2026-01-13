@@ -1,8 +1,8 @@
 {
   "name": "ClockMaster",
   "packageName": "com.m1n6.clockmaster",
-  "versionName": "3.0.1",
-  "versionCode": 4,
+  "versionName": "3.0.2",
+  "versionCode": 5,
   "main": "app/main.js",
   "ignore": [
     "build",

@@ -1,7 +1,7 @@
 /**
  * Project ClockMaster - Core Task (v3.0 完整版)
  * 特性：推送通知、历史记录、异常处理、红点调试
- * @version 3.0.0
+ * @version 3.0.2
  */
 
 var floatyWindow = null;
