@@ -1,14 +1,13 @@
 /**
- * Project ClockMaster - Core Task (v5.0 终极完整版)
- * 特性：三策略Y轴定位、X轴绝对居中、DPI自适应、穿透点击
- * @version 5.0.0
+ * Project ClockMaster - Core Task (v3.0 完整版)
+ * 特性：推送通知、历史记录、异常处理、红点调试
+ * @version 3.0.2
  */
 
 var floatyWindow = null;
 var debugDot = null;
 var startTime = Date.now();
 var executionId = "exec_" + startTime;
-var SCRIPT_VERSION = "5.0.0";
 
 // ================= 主函数 =================
 (function main() {
@@ -18,7 +17,7 @@ var SCRIPT_VERSION = "5.0.0";
 
     try {
         // 1. 初始化配置
-        showFloaty("v5.0 启动中...");
+        showFloaty("🚀 v3.0 启动中...");
         var config = loadConfig();
 
         // 配置诊断
@@ -30,37 +29,34 @@ var SCRIPT_VERSION = "5.0.0";
         log("==============================");
 
         if (!config.targetAppName) {
-            throw new Error("致命错误：targetAppName 未配置！");
+            throw new Error("致命错误：targetAppName 未配置！请检查配置是否正确保存。");
         }
 
-        log("========== ClockMaster v5.0 开始执行 ==========");
+        log("========== ClockMaster v3.0 开始执行 ==========");
         log("执行ID: " + executionId);
         log("目标应用: " + config.targetAppName);
-        log("屏幕尺寸: " + device.width + "x" + device.height);
-        log("屏幕密度: " + context.getResources().getDisplayMetrics().density);
+        log("最大延迟: " + config.maxDelay + " 分钟");
+        log("PushPlus: " + (config.pushplusToken ? "已配置" : "未配置"));
 
-        // 2. 权限检查
-        auto.waitFor();
-        device.keepScreenOn(300000);
-
-        // 3. 随机延迟（防风控）
+        // 2. 随机延迟（防风控）
         if (config.maxDelay > 0) {
             var delayMinutes = randomInt(0, config.maxDelay);
             if (delayMinutes > 0) {
-                showFloaty("随机延迟 " + delayMinutes + " 分钟");
+                showFloaty("⏰ 随机延迟 " + delayMinutes + " 分钟");
                 log("随机延迟: " + delayMinutes + " 分钟");
 
+                // 倒计时显示
                 for (var i = delayMinutes * 60; i > 0; i--) {
                     var mins = Math.floor(i / 60);
                     var secs = i % 60;
-                    showFloaty("等待中 " + mins + ":" + (secs < 10 ? "0" : "") + secs);
+                    showFloaty("⏰ 等待中 " + mins + ":" + (secs < 10 ? "0" : "") + secs);
                     sleep(1000);
                 }
             }
         }
 
-        // 4. 启动目标应用
-        showFloaty("启动应用...");
+        // 3. 启动目标应用
+        showFloaty("📱 启动应用...");
         log("正在启动应用: " + config.targetAppName);
 
         home();
@@ -76,62 +72,110 @@ var SCRIPT_VERSION = "5.0.0";
             }
         }
 
-        // 5. 等待应用加载
-        showFloaty("等待首页加载...");
+        // 4. 等待应用加载
+        showFloaty("👀 等待首页加载...");
         var pkg = getPackageName(config.targetAppName);
         if (pkg) {
             waitForPackage(pkg, 15000);
         }
-        sleep(5000);
 
-        // 6. 进入打卡页面
-        showFloaty("查找考勤入口...");
-        log("正在查找考勤入口...");
-        findAndEnterAttendance();
-        sleep(5000);
+        var loaded = textMatches(/移动考勤|工作台/).findOne(12000);
+        if (!loaded) {
+            throw new Error("首页加载超时，未找到关键元素");
+        }
 
-        // 7. 等待定位加载
-        showFloaty("等待定位服务...");
-        log("等待定位加载 (8秒)");
-        sleep(8000);
+        log("首页加载成功");
+        sleep(2000);
 
-        // 8. 请求截图权限
-        requestScreenCapture(false);
-        sleep(500);
+        // 5. 进入打卡页面
+        showFloaty("🔍 查找 [移动考勤] 入口");
+        log("正在查找移动考勤入口...");
 
-        // 9. 执行打卡（v5.0 三策略）
-        showFloaty("开始打卡...");
-        log("========== 执行v5.0三策略定位 ==========");
-        performClockInAction();
-        log("========== 打卡执行完毕 ==========");
+        var entry = text("移动考勤").findOne(5000);
+        if (!entry) {
+            throw new Error("未找到 [移动考勤] 入口");
+        }
 
-        // 10. 等待结果
+        log("找到入口，准备点击");
+        clickWithRedDot(entry);
         sleep(3000);
-        showFloaty("正在截图...");
-        screenshotPath = captureSnapshot("Success_v5.0");
+
+        // 6. 等待定位加载（关键步骤）
+        showFloaty("📍 等待定位服务...");
+        log("等待定位加载 (8秒)");
+        sleep(8000); // 必须等绿球出来
+
+        // 7. 执行打卡（三连击策略）
+        showFloaty("🎯 开始打卡...");
+        log("========== 开始执行三连击策略 ==========");
+
+        var targetWidget = text("打卡").findOne(4000);
+
+        if (targetWidget) {
+            var b = targetWidget.bounds();
+            var centerX = b.centerX();
+            var centerY = b.centerY();
+
+            log("找到打卡控件: (" + centerX + ", " + centerY + ")");
+
+            // 第 1 击: 文字中心
+            showFloaty("💥 第1击: 文字中心");
+            log("第1击: 文字中心 (" + centerX + ", " + centerY + ")");
+            showRedDot(centerX, centerY);
+            press(centerX, centerY, 350);
+            sleep(1000);
+
+            // 第 2 击: 向下偏移
+            showFloaty("💥 第2击: 向下偏移");
+            var offsetY = centerY + 150;
+            log("第2击: 向下偏移 (" + centerX + ", " + offsetY + ")");
+            showRedDot(centerX, offsetY);
+            press(centerX, offsetY, 350);
+            sleep(1000);
+        } else {
+            log("警告: 未找到打卡文字控件");
+            showFloaty("⚠️ 文字丢失，执行盲狙");
+        }
+
+        // 第 3 击: 屏幕绝对位置（兜底）
+        showFloaty("💥 第3击: 屏幕黄金点");
+        var absX = device.width / 2;
+        var absY = device.height * 0.55;
+        log("第3击: 屏幕黄金点 (" + absX + ", " + absY + ")");
+        showRedDot(absX, absY);
+        press(absX, absY, 400);
+
+        log("========== 三连击执行完毕 ==========");
+
+        // 8. 等待结果
+        sleep(3000);
+        showFloaty("📸 正在截图...");
+        screenshotPath = captureSnapshot("Success_v3.0");
 
         if (screenshotPath) {
             log("成功截图: " + screenshotPath);
         }
 
-        // 11. 标记成功
+        // 9. 标记成功
         success = true;
-        showFloaty("打卡完成！");
+        showFloaty("✅ 打卡完成！");
         log("========== 执行成功 ==========");
 
     } catch (e) {
+        // 异常处理
         success = false;
         errorMsg = e.message || String(e);
 
         console.error("执行失败: " + errorMsg);
         console.error(e.stack || e);
 
-        showFloaty("错误: " + errorMsg);
+        showFloaty("❌ 错误: " + errorMsg);
         log("========== 执行失败 ==========");
         log("错误信息: " + errorMsg);
 
+        // 错误截图
         try {
-            screenshotPath = captureSnapshot("Error_v5.0");
+            screenshotPath = captureSnapshot("Error_v3.0");
             if (screenshotPath) {
                 log("错误截图: " + screenshotPath);
             }
@@ -139,18 +183,19 @@ var SCRIPT_VERSION = "5.0.0";
             log("截图失败: " + screenshotErr.message);
         }
     } finally {
+        // 10. 计算执行时间
         var endTime = Date.now();
         var duration = endTime - startTime;
         log("执行耗时: " + formatDuration(duration));
 
-        // 记录历史
+        // 11. 记录历史
         try {
             saveHistory(success, duration, errorMsg, screenshotPath);
         } catch (historyErr) {
             log("保存历史失败: " + historyErr.message);
         }
 
-        // 发送推送
+        // 12. 发送推送
         try {
             var config = loadConfig();
             if (config.pushplusToken) {
@@ -166,8 +211,7 @@ var SCRIPT_VERSION = "5.0.0";
             log("发送推送失败: " + pushErr.message);
         }
 
-        // 清理资源
-        device.cancelKeepingAwake();
+        // 13. 清理资源
         sleep(3000);
         if (floatyWindow) {
             try { floatyWindow.close(); } catch(e) {}
@@ -176,158 +220,26 @@ var SCRIPT_VERSION = "5.0.0";
             try { debugDot.close(); } catch(e) {}
         }
 
-        log("========== ClockMaster v5.0 执行结束 ==========");
+        log("========== ClockMaster 执行结束 ==========");
         exit();
     }
 })();
 
-// ================= v5.0 核心：考勤入口查找 =================
-function findAndEnterAttendance() {
-    var entry = textMatches(/移动考勤|打卡/).findOne(5000);
-    if (entry) {
-        log("找到考勤入口: " + entry.text());
-
-        // 向上查找可点击的父控件
-        var target = entry;
-        for (var i = 0; i < 5; i++) {
-            if (target.clickable()) {
-                log("找到可点击控件，层级: " + i);
-                break;
-            }
-            var parent = target.parent();
-            if (parent) {
-                target = parent;
-            } else {
-                break;
-            }
-        }
-
-        // 使用穿透点击
-        var b = target.bounds();
-        var x = b.centerX();
-        var y = b.centerY();
-        log("点击考勤入口: (" + x + ", " + y + ")");
-        showRedDot(x, y);
-        press(x, y, 300);
-    } else {
-        throw new Error("未找到考勤入口");
-    }
-}
-
-// ================= v5.0 核心：三策略打卡定位 =================
-function performClockInAction() {
-    var targetX = -1;
-    var targetY = -1;
-    var strategy = "未知";
-
-    // X轴永远居中
-    var centerX = device.width / 2;
-
-    // ========== 策略A: 锚点定位 ==========
-    log("尝试策略A: 锚点定位...");
-    var anchor = text("快捷打卡").findOne(2000);
-    if (anchor) {
-        targetX = centerX;
-        targetY = anchor.bounds().bottom + (device.height * 0.18);
-        strategy = "A-锚点定位";
-        log("策略A成功: 锚点Y=" + anchor.bounds().bottom + ", 目标Y=" + targetY);
-    }
-
-    // ========== 策略B: 颜色定位 ==========
-    if (targetX === -1) {
-        log("尝试策略B: 颜色定位...");
-        try {
-            var img = captureScreen();
-            if (img) {
-                // 扫描区域：屏幕中下部
-                var regionX = Math.floor(device.width * 0.3);
-                var regionY = Math.floor(device.height * 0.4);
-                var regionW = Math.floor(device.width * 0.4);
-                var regionH = Math.floor(device.height * 0.4);
-
-                var p = findColor(img, "#2abf68", {
-                    region: [regionX, regionY, regionW, regionH],
-                    threshold: 40
-                });
-
-                if (p) {
-                    targetX = centerX;
-                    targetY = p.y;
-                    strategy = "B-颜色定位";
-                    log("策略B成功: 找到绿色点 (" + p.x + ", " + p.y + ")");
-                } else {
-                    log("策略B: 未找到目标颜色");
-                }
-                img.recycle();
-            }
-        } catch (e) {
-            log("策略B异常: " + e.message);
-        }
-    }
-
-    // ========== 执行点击 ==========
-    if (targetX > 0 && targetY > 0) {
-        log("使用" + strategy + ": (" + targetX + ", " + targetY + ")");
-        showFloaty(strategy);
-
-        // 双击确保
-        showRedDot(targetX, targetY);
-        press(targetX, targetY, 400);
-        log("第1击完成");
-        sleep(300);
-
-        showRedDot(targetX, targetY);
-        press(targetX, targetY, 400);
-        log("第2击完成");
-    } else {
-        // ========== 策略C: 加特林扫射兜底 ==========
-        log("策略A/B失败，执行策略C: 加特林扫射");
-        showFloaty("C-扫射兜底");
-        strategy = "C-加特林扫射";
-
-        var startY = device.height * 0.50;
-        var endY = device.height * 0.75;
-        var step = dp2px(60);
-
-        log("扫射范围: Y=" + startY + " 到 " + endY + ", 步长=" + step);
-
-        var clickCount = 0;
-        for (var y = startY; y < endY; y += step) {
-            var clickX = centerX;
-            var clickY = Math.floor(y);
-
-            showRedDot(clickX, clickY);
-            press(clickX, clickY, 200);
-            clickCount++;
-            log("扫射点 #" + clickCount + ": (" + clickX + ", " + clickY + ")");
-            sleep(150);
-        }
-
-        log("加特林扫射完成，共" + clickCount + "击");
-    }
-
-    log("打卡策略执行完毕: " + strategy);
-}
-
-// ================= DPI 自适应 =================
-function dp2px(dp) {
-    var density = context.getResources().getDisplayMetrics().density;
-    return Math.floor(dp * density + 0.5);
-}
-
 // ================= 配置加载 =================
 function loadConfig() {
+    // Try to get config from launcher arguments first
     try {
         var launcherArgs = engines.myEngine().execArgv;
         if (launcherArgs && launcherArgs.arguments && launcherArgs.arguments.config) {
-            log("使用 Launcher 传递的配置");
+            log("✅ 使用 Launcher 传递的配置");
             return launcherArgs.arguments.config;
         }
     } catch (e) {
-        log("无法读取 Launcher 参数: " + e.message);
+        log("⚠️ 无法读取 Launcher 参数，使用存储配置: " + e.message);
     }
 
-    log("从存储中读取配置");
+    // Fallback to storage
+    log("📂 从存储中读取配置");
     var storage = storages.create("clockmaster_config");
 
     return {
@@ -356,12 +268,13 @@ function saveHistory(success, duration, errorMsg, screenshotPath) {
         duration: duration,
         errorMsg: errorMsg,
         source: "auto",
-        scriptVersion: SCRIPT_VERSION,
+        scriptVersion: "3.0.0",
         screenshotPath: screenshotPath
     };
 
     history.unshift(record);
 
+    // 限制最多50条记录
     if (history.length > 50) {
         history = history.slice(0, 50);
     }
@@ -377,14 +290,14 @@ function sendSuccessPush(token, duration) {
     var durationText = formatDuration(duration);
     var timeText = new Date().toLocaleString();
 
-    var content = "<h2 style='color:#4CAF50;'>打卡成功</h2>";
+    var content = "<h2 style='color:#4CAF50;'>✓ 打卡成功</h2>";
     content += "<p><strong>执行时间:</strong> " + timeText + "</p>";
     content += "<p><strong>耗时:</strong> " + durationText + "</p>";
-    content += "<p><strong>脚本版本:</strong> " + SCRIPT_VERSION + "</p>";
+    content += "<p><strong>脚本版本:</strong> 3.0.0</p>";
     content += "<hr>";
     content += "<p style='color:#999;font-size:12px;'>ClockMaster 自动打卡助手</p>";
 
-    sendPushPlus(token, "ClockMaster - 打卡成功", content);
+    sendPushPlus(token, "✓ ClockMaster - 打卡成功", content);
 }
 
 function sendFailurePush(token, errorMsg, screenshotPath) {
@@ -392,10 +305,10 @@ function sendFailurePush(token, errorMsg, screenshotPath) {
 
     var timeText = new Date().toLocaleString();
 
-    var content = "<h2 style='color:#F44336;'>打卡失败</h2>";
+    var content = "<h2 style='color:#F44336;'>✗ 打卡失败</h2>";
     content += "<p><strong>执行时间:</strong> " + timeText + "</p>";
     content += "<p><strong>错误信息:</strong> " + errorMsg + "</p>";
-    content += "<p><strong>脚本版本:</strong> " + SCRIPT_VERSION + "</p>";
+    content += "<p><strong>脚本版本:</strong> 3.0.0</p>";
 
     if (screenshotPath) {
         content += "<p><strong>截图:</strong> " + screenshotPath + "</p>";
@@ -405,7 +318,7 @@ function sendFailurePush(token, errorMsg, screenshotPath) {
     content += "<p style='color:#999;font-size:12px;'>ClockMaster 自动打卡助手</p>";
     content += "<p style='color:#ff9800;'>请检查日志或截图排查问题</p>";
 
-    sendPushPlus(token, "ClockMaster - 打卡失败", content);
+    sendPushPlus(token, "✗ ClockMaster - 打卡失败", content);
 }
 
 function sendPushPlus(token, title, content) {
@@ -439,57 +352,66 @@ function sendPushPlus(token, title, content) {
 
 // ================= 工具函数 =================
 
+// 在点击位置显示红点
 function showRedDot(x, y) {
     if (debugDot) {
         try { debugDot.close(); } catch(e) {}
     }
 
-    try {
-        debugDot = floaty.rawWindow(
-            <frame w="24" h="24" bg="#ff0000" alpha="0.9"/>
-        );
-        debugDot.setPosition(x - 12, y - 12);
+    debugDot = floaty.rawWindow(
+        <frame w="30px" h="30px">
+            <img w="20px" h="20px" src="file:///android_asset/modules/autojs.png" tint="#ff0000" radius="10dp" bg="#ff0000"/>
+        </frame>
+    );
 
-        setTimeout(function() {
-            if (debugDot) {
-                try { debugDot.close(); } catch(e) {}
-            }
-        }, 600);
-    } catch (e) {
-        log("红点显示失败: " + e.message);
-    }
+    debugDot.setPosition(x - 15, y - 15);
+
+    setTimeout(function() {
+        if (debugDot) {
+            try { debugDot.close(); } catch(e) {}
+        }
+    }, 800);
 }
 
+// 带红点的点击
+function clickWithRedDot(widget) {
+    if (!widget) return;
+    var b = widget.bounds();
+    var x = b.centerX();
+    var y = b.centerY();
+    log("点击控件: (" + x + ", " + y + ")");
+    showRedDot(x, y);
+    press(x, y, 100);
+}
+
+// 显示悬浮窗消息
 function showFloaty(text) {
     if (!floatyWindow) {
-        try {
-            floatyWindow = floaty.rawWindow(
-                <card cardCornerRadius="8dp" alpha="0.85" bg="#222222">
-                    <text id="content" text="" padding="12" textSize="14sp" textColor="#00ff00" textStyle="bold"/>
-                </card>
-            );
-            floatyWindow.setPosition(50, 200);
-        } catch (e) {
-            log("悬浮窗创建失败: " + e.message);
-            return;
-        }
+        floatyWindow = floaty.rawWindow(
+            <card cardCornerRadius="8dp" alpha="0.8" bg="#222222">
+                <text id="content" text="" padding="15" textSize="16sp" textColor="#00ff00" textStyle="bold"/>
+            </card>
+        );
+        floatyWindow.setPosition(50, 200);
     }
-
-    try {
-        ui.run(function() {
-            floatyWindow.content.setText(text);
-        });
-    } catch (e) {
-        log("悬浮窗更新失败: " + e.message);
-    }
+    ui.run(function() {
+        floatyWindow.content.setText(text);
+    });
 }
 
+// 截图功能
 function captureSnapshot(tag) {
     try {
+        if (!requestScreenCapture(false)) {
+            log("截图权限请求失败");
+            return null;
+        }
+
         var timestamp = new Date().getTime();
         var fileName = "ClockMaster_" + tag + "_" + timestamp + ".png";
         var path = "/sdcard/Pictures/" + fileName;
 
+        // 确保目录存在
         var dir = "/sdcard/Pictures/";
         if (!files.exists(dir)) {
             files.createWithDirs(dir);
@@ -504,10 +426,12 @@ function captureSnapshot(tag) {
     }
 }
 
+// 生成随机整数
 function randomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+// 格式化持续时间
 function formatDuration(ms) {
     var seconds = Math.floor(ms / 1000);
     var minutes = Math.floor(seconds / 60);
