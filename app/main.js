@@ -14,13 +14,13 @@
 "ui";
 
 // 加载模块
-var Storage = require("./modules/storage.js");
-var Permission = require("./modules/permission.js");
-var Launcher = require("./modules/launcher.js");
-var Scheduler = require("./modules/scheduler.js");
-var History = require("./modules/history.js");
-var PushPlus = require("./modules/pushplus.js");
-var Utils = require("./modules/utils.js");
+var Storage = require("./app/modules/storage.js");
+var Permission = require("./app/modules/permission.js");
+var Launcher = require("./app/modules/launcher.js");
+var Scheduler = require("./app/modules/scheduler.js");
+var History = require("./app/modules/history.js");
+var PushPlus = require("./app/modules/pushplus.js");
+var Utils = require("./app/modules/utils.js");
 
 // 应用启动检查
 log("========== ClockMaster v3.0 启动 ==========");

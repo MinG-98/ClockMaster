@@ -1,37 +1,50 @@
 {
-  "name": "ClockMaster",
-  "packageName": "com.m1n6.clockmaster",
-  "versionName": "3.0.3",
-  "versionCode": 6,
-  "main": "app/main.js",
-  "ignore": [
-    "build",
-    "*.md",
-    ".git"
+  "abis": [
+    "arm64-v8a",
+    "armeabi-v7a",
+    "x86",
+    "x86_64"
   ],
-  "icon": "app/assets/icon.png",
+  "assets": [],
+  "buildDir": "build",
+  "build": {
+    "build_id": null,
+    "build_number": 0,
+    "build_time": 0
+  },
+  "useFeatures": [],
+  "icon": "res/logo.png",
+  "ignoredDirs": [
+    "build"
+  ],
+  "encrypt-code": false,
   "launchConfig": {
+    "displaySplash": true,
+    "hideAccessibilityServices": false,
+    "hideLauncher": false,
     "hideLogs": true,
     "stableMode": true,
-    "displaySplash": true,
-    "splashText": "ClockMaster 启动中...",
-    "splashIcon": "app/assets/icon.png",
+    "volumeUpcontrol": false,
     "permissions": [
       "accessibility_services",
-      "draw_overlay",
-      "external_storage",
-      "foreground_service"
+      "draw_overlay"
     ],
-    "serviceDesc": "ClockMaster 后台服务"
+    "serviceDesc": "ClockMaster 后台服务",
+    "splashIcon": "res/splashIcon.png",
+    "splashText": "ClockMaster 启动中..."
   },
-  "buildConfig": {
-    "useDefaultIcons": false,
-    "abis": ["arm64-v8a", "armeabi-v7a"],
-    "obscuredFiles": [],
-    "signingConfig": {
-      "alias": "clockmaster",
-      "keystore": ""
-    }
+  "libs": [],
+  "main": "app/main.js",
+  "name": "ClockMaster",
+  "outputPath": "/storage/emulated/0/脚本/ClockMaster/build",
+  "packageName": "com.m1n6.clockmaster",
+  "projectDirectory": "/storage/emulated/0/脚本/ClockMaster",
+  "scripts": {},
+  "signingConfig": {
+    "alias": null,
+    "keystore": null
   },
-  "encryptLevel": 0
+  "sourcePath": "/storage/emulated/0/脚本/ClockMaster/app/main.js",
+  "versionCode": 6,
+  "versionName": "3.0.3"
 }
