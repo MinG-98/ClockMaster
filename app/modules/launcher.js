@@ -355,14 +355,21 @@ var Launcher = {
             if (execution) {
                 this.updateStatus("任务已启动 (ID: " + execution.id + ")");
 
-                execution.on("stop", function() {
-                    log("核心任务执行完毕");
-                });
+                // 兼容性：某些版本的 Auto.js 可能不支持 .on() 方法
+                try {
+                    if (typeof execution.on === "function") {
+                        execution.on("stop", function() {
+                            log("核心任务执行完毕");
+                        });
 
-                execution.on("error", function(error) {
-                    log("❌ 核心任务执行错误: " + error);
-                    toast("❌ 任务执行失败: " + error);
-                });
+                        execution.on("error", function(error) {
+                            log("❌ 核心任务执行错误: " + error);
+                            toast("❌ 任务执行失败: " + error);
+                        });
+                    }
+                } catch (e) {
+                    log("注意: 事件监听不可用 (" + e.message + ")");
+                }
 
                 return {
                     success: true,

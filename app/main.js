@@ -112,8 +112,8 @@ ui.layout(
 
         {/* 操作按钮 */}
         <horizontal marginTop="8">
-            <button id="save_btn" text="保存配置" style="Widget.AppCompat.Button.Colored" layout_weight="1" marginRight="6"/>
-            <button id="run_btn" text="立即执行" style="Widget.AppCompat.Button.Colored" layout_weight="1" marginLeft="6" bg="#4CAF50"/>
+            <button id="save_btn" text="保存配置" style="Widget.AppCompat.Button.Colored" layout_weight="1" margin="0 4"/>
+            <button id="run_btn" text="立即执行" style="Widget.AppCompat.Button.Colored" layout_weight="1" margin="0 4" bg="#4CAF50"/>
         </horizontal>
     </vertical>
     </ScrollView>
