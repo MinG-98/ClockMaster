@@ -6,7 +6,7 @@
 var Storage = require("./storage.js");
 
 // 本地备份路径
-var BACKUP_DIR = "/sdcard/ClockMaster/";
+var BACKUP_DIR = "/sdcard/脚本/ClockMaster/";
 var BACKUP_SCRIPT_PATH = BACKUP_DIR + "backup_core.js";
 var VERSION_FILE_PATH = BACKUP_DIR + "version.json";
 
@@ -233,10 +233,52 @@ var Launcher = {
 
     /**
      * 智能获取脚本 (检查更新)
-     * @param {string} url - 远程脚本URL
+     * @param {string} url - 远程脚本URL 或 本地文件路径
      * @returns {Object} {success, content, source, version}
      */
     getScript: function(url) {
+        // 检查是否是本地文件路径
+        if (url && url.startsWith("file://")) {
+            this.updateStatus("读取本地文件...");
+            var filePath = url.replace("file://", "");
+
+            try {
+                if (!files.exists(filePath)) {
+                    this.updateStatus("本地文件不存在: " + filePath);
+                    return {
+                        success: false,
+                        content: null,
+                        source: "none",
+                        version: null,
+                        updated: false
+                    };
+                }
+
+                var content = files.read(filePath);
+                var meta = this.parseScriptMeta(content);
+
+                this.updateStatus("本地文件加载成功 v" + meta.version);
+
+                return {
+                    success: true,
+                    content: content,
+                    source: "local_file",
+                    version: meta.version,
+                    updated: false
+                };
+            } catch (e) {
+                this.updateStatus("读取本地文件失败: " + e.message);
+                return {
+                    success: false,
+                    content: null,
+                    source: "none",
+                    version: null,
+                    updated: false
+                };
+            }
+        }
+
+        // 处理远程 URL
         var localData = this.loadBackup();
         var localVersion = localData ? localData.meta.version : "0.0.0";
 
@@ -315,6 +357,11 @@ var Launcher = {
 
                 execution.on("stop", function() {
                     log("核心任务执行完毕");
+                });
+
+                execution.on("error", function(error) {
+                    log("❌ 核心任务执行错误: " + error);
+                    toast("❌ 任务执行失败: " + error);
                 });
 
                 return {
