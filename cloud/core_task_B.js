@@ -12,7 +12,7 @@ var SCRIPT_VERSION = "5.2.0-B";
 
 // 检测配置
 var CHECK_CONFIG = {
-    TIMEOUT_SEC: 10,
+    TIMEOUT_SEC: 30,
     TEXT_FAIL_TITLE: "打卡失败",
     TEXT_FAIL_CONFIRM: "确定",
     TEXT_SUCCESS_MARK: "打卡成功"
@@ -192,10 +192,18 @@ function performClockInAction() {
     var shortcutText = "打卡";
 
     log("策略B: 回到桌面长按 " + appName + " 图标...");
+    wakeAndUnlock();
     home();
-    sleep(800);
+    sleep(1200);
 
-    var icon = text(appName).findOne(3000);
+    var icon = null;
+    for (var i = 0; i < 3; i++) {
+        icon = text(appName).findOne(3000);
+        if (icon) break;
+        log("未找到桌面图标，重试: " + (i + 1));
+        home();
+        sleep(1200);
+    }
     if (!icon) {
         log("策略B失败: 未找到桌面图标 " + appName);
         return false;
@@ -242,7 +250,13 @@ function performClockInAction() {
 
     sleep(800);
 
-    var shortcut = text(shortcutText).findOne(3000);
+    var shortcut = null;
+    for (var j = 0; j < 2; j++) {
+        shortcut = text(shortcutText).findOne(3000);
+        if (shortcut) break;
+        log("未找到快捷菜单，重试: " + (j + 1));
+        sleep(800);
+    }
     if (!shortcut) {
         log("策略B失败: 未找到快捷菜单 " + shortcutText);
         return false;
@@ -267,6 +281,23 @@ function clickTwiceAt(x, y, strategyName) {
     showRedDot(x, y);
     click(x, y);
     log("第2击完成");
+}
+
+function wakeAndUnlock() {
+    try {
+        device.wakeUpIfNeeded();
+    } catch (e) {}
+
+    sleep(800);
+    if (!device.isScreenOn()) return;
+
+    try {
+        var km = context.getSystemService(context.KEYGUARD_SERVICE);
+        if (km && km.isKeyguardLocked()) {
+            swipe(device.width / 2, device.height * 0.8, device.width / 2, device.height * 0.2, 300);
+            sleep(800);
+        }
+    } catch (e) {}
 }
 
 // ================= v5.2B 核心：轮询检测结果（无截图） =================
