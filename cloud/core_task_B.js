@@ -204,8 +204,42 @@ function performClockInAction() {
     var b = icon.bounds();
     var x = b.centerX();
     var y = b.centerY();
-    showRedDot(x, y);
-    press(x, y, 800);
+    log("桌面图标坐标: (" + x + ", " + y + ")");
+
+    // 优先尝试节点长按，避免坐标点击异常
+    var longClicked = false;
+    try {
+        if (icon.longClickable && icon.longClickable()) {
+            longClicked = icon.longClick();
+        } else {
+            var parent = icon.parent();
+            for (var i = 0; i < 5 && parent; i++) {
+                if (parent.longClickable && parent.longClickable()) {
+                    longClicked = parent.longClick();
+                    break;
+                }
+                parent = parent.parent();
+            }
+        }
+    } catch (e) {
+        log("节点长按异常: " + e.message);
+    }
+
+    if (!longClicked) {
+        try {
+            showRedDot(x, y);
+            press(x, y, 800);
+            longClicked = true;
+        } catch (e) {
+            log("坐标长按异常: " + e.message);
+        }
+    }
+
+    if (!longClicked) {
+        log("策略B失败: 长按图标未触发快捷菜单");
+        return false;
+    }
+
     sleep(800);
 
     var shortcut = text(shortcutText).findOne(3000);
